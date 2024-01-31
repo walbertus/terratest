@@ -6,7 +6,6 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"strings"
 	"time"
@@ -75,7 +74,7 @@ func HttpGetWithOptionsE(t testing.TestingT, options HttpGetOptions) (int, strin
 	}
 
 	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 
 	if err != nil {
 		return -1, "", err
@@ -280,7 +279,7 @@ func HTTPDoWithOptionsE(
 	}
 
 	defer resp.Body.Close()
-	respBody, err := ioutil.ReadAll(resp.Body)
+	respBody, err := io.ReadAll(resp.Body)
 
 	if err != nil {
 		return -1, "", err
@@ -347,11 +346,15 @@ func HTTPDoWithRetryWithOptionsE(
 	t testing.TestingT, options HttpDoOptions, expectedStatus int,
 	retries int, sleepBetweenRetries time.Duration,
 ) (string, error) {
-	// The request body is closed after a request is complete.
-	// Extract the underlying data and cache it so we can reuse for retried requests
-	data, err := io.ReadAll(options.Body)
-	if err != nil {
-		return "", err
+	var data []byte
+	if options.Body != nil {
+		// The request body is closed after a request is complete.
+		// Read the underlying data and cache it, so we can reuse for retried requests.
+		b, err := io.ReadAll(options.Body)
+		if err != nil {
+			return "", err
+		}
+		data = b
 	}
 
 	options.Body = nil
